@@ -1,0 +1,50 @@
+name: Acordar revisão do Telegram
+on:
+  schedule:
+    # 08h / 19h em Nova York, com e sem horário de verão.
+    - cron: '0,20 0,12,13,23 * * *'
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/revisao-telegram.yml']
+permissions: {}
+concurrency:
+  group: acordar-revisao-telegram
+  cancel-in-progress: false
+jobs:
+  wake:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Acordar bot existente sem acessar conteúdo privado
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        shell: python
+        run: |
+          import os, time, urllib.request, urllib.error
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          local = datetime.now(ZoneInfo("America/New_York"))
+          if os.environ["EVENT_NAME"] == "schedule" and local.hour not in (8, 19):
+              print("Fora do horário de revisão em Nova York.")
+              raise SystemExit(0)
+          url = "https://instagram-news-bot-syat.onrender.com/"
+          def wake():
+              try:
+                  with urllib.request.urlopen(url, timeout=90) as response:
+                      return response.status
+              except urllib.error.HTTPError as error:
+                  if error.code == 404:
+                      return error.code
+                  raise
+          for attempt in range(3):
+              try:
+                  status = wake()
+                  print("Bot respondeu HTTP", status)
+                  break
+              except (urllib.error.URLError, TimeoutError):
+                  if attempt == 2: raise
+                  time.sleep(15)
+          # O job interno roda após a inicialização. O intervalo não é um SLA.
+          time.sleep(45)
+          print("Bot mantido acordado para conferir a fila:", wake())
