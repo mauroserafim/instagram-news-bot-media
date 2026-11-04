@@ -5,7 +5,7 @@ on:
     - cron: '0,20 0,12,13,23 * * *'
   workflow_dispatch:
   push:
-    paths: ['.github/workflows/revisao-telegram.yml']
+    paths: ['.github/workflows/revisao-telegram.yml', 'schedule/telegram-wake.json']
 permissions: {}
 concurrency:
   group: acordar-revisao-telegram
